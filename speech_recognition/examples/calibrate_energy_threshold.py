@@ -2,8 +2,18 @@
 
 # NOTE: this example requires PyAudio because it uses the Microphone class
 
-import serial
 import speech_recognition as sr
+import socket
+
+
+UDP_IP = "192.168.1.250"
+UDP_PORT = 5683
+MESSAGE = "a"
+
+def sendUDP(ip, port, message):
+	sock = socket.socket(socket.AF_INET, # Internet
+	                     socket.SOCK_DGRAM) # UDP
+	sock.sendto(message, (ip, port))
 
 def transcribe():
 	r = sr.Recognizer()
@@ -32,13 +42,13 @@ def transcribe():
 
 object_dictionary = ["lights", "light", "lamp", "socket", "tv"]
 command_dictionary = ["on", "off"]
-ser = serial.Serial("COM5", 9600)
+#ser = serial.Serial("COM5", 9600)
 
 for i in range(0, 5):
 	# obtain audio from the microphone
-	recieved = transcribe()
+	#recieved = transcribe()
 	# for i in range(0, 2):
-
+	recieved = ["turn", "off", "lights"]
 
 	active_object = ""
 	active_command = ""
@@ -56,9 +66,9 @@ for i in range(0, 5):
 	print("Command: " + active_object + " " + active_command)
 	if (active_object == "lights" or active_object == "light"):
 		if (active_command == "on"):
-			ser.write("H")
+			sendUDP(UDP_IP, UDP_PORT, "H")
 		if (active_command == "off"):
-			ser.write("L")
+			sendUDP(UDP_IP, UDP_PORT, "L")
 
 
 # while True:

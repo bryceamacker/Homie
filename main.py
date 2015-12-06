@@ -4,24 +4,50 @@
 
 import speech_recognition as sr
 import socket
+import select
 
 
-UDP_IP = "192.168.1.250"
+UDP_IP = "192.168.2.248"
 UDP_PORT = 5683
 
-sock = socket.socket(socket.AF_INET, # Internet
-                     socket.SOCK_DGRAM) # UDP
+# sock = socket.socket(socket.AF_INET, # Internet
+#                      socket.SOCK_DGRAM) # UDP
+# sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+
+TCP_IP = '192.168.2.248'
+TCP_PORT = 5683
+BUFFER_SIZE = 1024
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+timeout_in_seconds = 2
+s.connect((TCP_IP, TCP_PORT))
+data = ""
+
+def get_ip_address():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    return s.getsockname()[0] 
+
+def tcpSendRecieve(message, ip, port):
+	s.setblocking(1)
+	s.send(message)
+	s.setblocking(0)
+	data = ""
+
+	ready = select.select([s], [], [], timeout_in_seconds)
+	if ready[0]:
+	    data = s.recv(4096)
+	print "received data:", data
 
 def sendUDP(ip, port, message):
 	sock.sendto(message, (ip, port))
+	data = sock.recv(4096)
+	print(data)
 
 def receiveUPD(port = UDP_PORT):
 	sock = socket.socket(socket.AF_INET, # Internet
 	                     socket.SOCK_DGRAM) # UDP
-	try:
-		sock.bind(("", UDP_PORT))
-	except socket.error:
-		print("Caught")
+	sock.bind(("", 5683))
 
 	while True:
 	    data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
@@ -56,30 +82,35 @@ def transcribe():
 object_dictionary = ["lights", "light", "lamp", "socket", "tv"]
 command_dictionary = ["on", "off"]
 
-for i in range(0, 5):
+#for i in range(0, 5):
 	# obtain audio from the microphone
-	#recieved = transcribe()
-	# for i in range(0, 2):
-	recieved = ["turn", "off", "lights"]
+recieved = transcribe()
+# for i in range(0, 2):
+# if ((i % 2) == 0):
+# 	recieved = ["turn", "on", "lights"]
+# else:
+# 	recieved = ["turn", "off", "lights"]
 
-	active_object = ""
-	active_command = ""
 
-	for word in recieved:
-	    if word in object_dictionary:
-	        active_object = word
-	        break
+active_object = ""
+active_command = ""
 
-	for word in recieved:
-	    if word in command_dictionary:
-	        active_command = word
-	        break
+for word in recieved:
+    if word in object_dictionary:
+        active_object = word
+        break
 
-	print("Command: " + active_object + " " + active_command)
-	if (active_object == "lights" or active_object == "light"):
-		if (active_command == "on"):
-			sendUDP(UDP_IP, UDP_PORT, "H")
-			receiveUPD()
-		if (active_command == "off"):
-			sendUDP(UDP_IP, UDP_PORT, "L")
-			receiveUPD()
+for word in recieved:
+    if word in command_dictionary:
+        active_command = word
+        break
+
+print("Command: " + active_object + " " + active_command)
+if (active_object == "lights" or active_object == "light"):
+	if (active_command == "on"):
+		tcpSendRecieve("H", TCP_IP, TCP_PORT)
+		# sendUDP(UDP_IP, UDP_PORT, "H")
+		# receiveUPD()
+	if (active_command == "off"):
+		tcpSendRecieve("L", TCP_IP, TCP_PORT)
+s.close()
